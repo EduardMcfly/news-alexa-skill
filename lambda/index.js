@@ -526,7 +526,7 @@ function sendEmail(handlerInput) {
 // defined are included below. The order matters - they're processed top to bottom.
 exports.handler = Alexa.SkillBuilders.custom()
   .addRequestHandlers(
-    InvalidConfigHandler,
+    // InvalidConfigHandler,
     LaunchRequestHandler,
     GetCodeIntentHandler,
     GetReportIntentNotCompleteHandler,
