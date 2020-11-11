@@ -180,7 +180,7 @@ const GetReportIntentCompleteHandler = {
     const questionYesterday = Alexa.getSlotValue(handlerInput.requestEnvelope, 'questionYesterday');
     const questionToday = Alexa.getSlotValue(handlerInput.requestEnvelope, 'questionToday');
     const questionBlocking = Alexa.getSlotValue(handlerInput.requestEnvelope, 'questionBlocking');
-
+    console.log(questionYesterday)
     const reportData = {
       reportDate: luxon.DateTime.local().toLocaleString(luxon.DateTime.DATE_HUGE),
       name: sessionAttributes.userName,
