@@ -1,26 +1,9 @@
-/*
-* Alexa Survey Skill Template
-* Copyright (c) 2020 Dabble Lab - http://dabblelab.com
-* Portions Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-* SPDX-License-Identifier: LicenseRef-.amazon.com.-AmznSL-1.0
-* Licensed under the Amazon Software License  http://aws.amazon.com/asl/
-*/
-
-/* 
-* This is an example skill that lets users submit a daily stand up meeting report.
-* The skill owner can set up customers' name, emails address and assign a passcode. 
-* The passcode will serve as an access mechanism for authorized customers to use the skill. 
-* The skill owner will get email updates when a customer submits a response. 
-* This template can also be used to run surveys or for other collaboration use-cases.
-*/
-
 const Alexa = require('ask-sdk-core');
 const AWS = require('aws-sdk');
 const dotenv = require('dotenv');
 const i18n = require('i18next');
 const sprintf = require('i18next-sprintf-postprocessor');
 const luxon = require('luxon');
-const sgMail = require('@sendgrid/mail');
 
 // edit the team.json file to add uer pins
 const usersData = require('./team.json');
@@ -35,25 +18,6 @@ const languageStrings = require('./languages/languageStrings');
 
 // This handler responds when required environment variables
 // missing or a .env file has not been created.
-const InvalidConfigHandler = {
-  canHandle(handlerInput) {
-    const attributes = handlerInput.attributesManager.getRequestAttributes();
-
-    const invalidConfig = attributes.invalidConfig || false;
-
-    return invalidConfig;
-  },
-  handle(handlerInput) {
-    const { responseBuilder, attributesManager } = handlerInput;
-    const requestAttributes = attributesManager.getRequestAttributes();
-
-    const speakOutput = requestAttributes.t('ENV_NOT_CONFIGURED');
-
-    return responseBuilder
-      .speak(speakOutput)
-      .getResponse();
-  },
-};
 
 const LaunchRequestHandler = {
   canHandle(handlerInput) {
@@ -78,9 +42,11 @@ const LaunchRequestHandler = {
 const GetCodeIntentHandler = {
   canHandle(handlerInput) {
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && handlerInput.requestEnvelope.request.intent.name === 'GetCodeIntent'
-      && !sessionAttributes.validated;
+    return (
+      handlerInput.requestEnvelope.request.type === 'IntentRequest' &&
+      handlerInput.requestEnvelope.request.intent.name === 'GetCodeIntent' &&
+      !sessionAttributes.validated
+    );
   },
   async handle(handlerInput) {
     const currentIntent = handlerInput.requestEnvelope.request.intent;
@@ -94,9 +60,7 @@ const GetCodeIntentHandler = {
 
     if (pinAttempts > 2) {
       speakOutput = requestAttributes.t('PIN_MAX_ATTEMPTS');
-      return handlerInput.responseBuilder
-        .speak(speakOutput)
-        .getResponse();
+      return handlerInput.responseBuilder.speak(speakOutput).getResponse();
     }
 
     const meetingCode = +currentIntent.slots.MeetingCode.value;
@@ -130,9 +94,11 @@ const GetCodeIntentHandler = {
 
 const GetReportIntentNotCompleteHandler = {
   canHandle(handlerInput) {
-    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && handlerInput.requestEnvelope.request.intent.name === 'GetReportIntent'
-      && handlerInput.requestEnvelope.request.dialogState !== 'COMPLETED';
+    return (
+      handlerInput.requestEnvelope.request.type === 'IntentRequest' &&
+      handlerInput.requestEnvelope.request.intent.name === 'GetReportIntent' &&
+      handlerInput.requestEnvelope.request.dialogState !== 'COMPLETED'
+    );
   },
   async handle(handlerInput) {
     const currentIntent = handlerInput.requestEnvelope.request.intent;
@@ -159,9 +125,11 @@ const GetReportIntentNotCompleteHandler = {
 // helper function and confirming that the stand up report was sent.
 const GetReportIntentCompleteHandler = {
   canHandle(handlerInput) {
-    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && handlerInput.requestEnvelope.request.intent.name === 'GetReportIntent'
-      && handlerInput.requestEnvelope.request.dialogState === 'COMPLETED';
+    return (
+      handlerInput.requestEnvelope.request.type === 'IntentRequest' &&
+      handlerInput.requestEnvelope.request.intent.name === 'GetReportIntent' &&
+      handlerInput.requestEnvelope.request.dialogState === 'COMPLETED'
+    );
   },
   async handle(handlerInput) {
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
@@ -177,12 +145,23 @@ const GetReportIntentCompleteHandler = {
         .getResponse();
     }
 
-    const questionYesterday = Alexa.getSlotValue(handlerInput.requestEnvelope, 'questionYesterday');
-    const questionToday = Alexa.getSlotValue(handlerInput.requestEnvelope, 'questionToday');
-    const questionBlocking = Alexa.getSlotValue(handlerInput.requestEnvelope, 'questionBlocking');
-    console.log(questionYesterday)
+    const questionYesterday = Alexa.getSlotValue(
+      handlerInput.requestEnvelope,
+      'questionYesterday'
+    );
+    const questionToday = Alexa.getSlotValue(
+      handlerInput.requestEnvelope,
+      'questionToday'
+    );
+    const questionBlocking = Alexa.getSlotValue(
+      handlerInput.requestEnvelope,
+      'questionBlocking'
+    );
+    console.log(questionYesterday);
     const reportData = {
-      reportDate: luxon.DateTime.local().toLocaleString(luxon.DateTime.DATE_HUGE),
+      reportDate: luxon.DateTime.local().toLocaleString(
+        luxon.DateTime.DATE_HUGE
+      ),
       name: sessionAttributes.userName,
       email: sessionAttributes.userEmail,
       yesterday: questionYesterday,
@@ -209,9 +188,7 @@ const GetReportIntentCompleteHandler = {
         });
     }
 
-    return handlerInput.responseBuilder
-      .speak(speakOutput)
-      .getResponse();
+    return handlerInput.responseBuilder.speak(speakOutput).getResponse();
   },
 };
 
@@ -219,24 +196,26 @@ const GetReportIntentCompleteHandler = {
 // how to get or reset their passcode
 const ResetPinIntentHandler = {
   canHandle(handlerInput) {
-    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && handlerInput.requestEnvelope.request.intent.name === 'ResetPinIntent';
+    return (
+      handlerInput.requestEnvelope.request.type === 'IntentRequest' &&
+      handlerInput.requestEnvelope.request.intent.name === 'ResetPinIntent'
+    );
   },
   handle(handlerInput) {
     const requestAttributes = handlerInput.attributesManager.getRequestAttributes();
 
     const speakOutput = requestAttributes.t('HELP_PIN');
 
-    return handlerInput.responseBuilder
-      .speak(speakOutput)
-      .getResponse();
+    return handlerInput.responseBuilder.speak(speakOutput).getResponse();
   },
 };
 
 const HelpIntentHandler = {
   canHandle(handlerInput) {
-    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && handlerInput.requestEnvelope.request.intent.name === 'AMAZON.HelpIntent';
+    return (
+      handlerInput.requestEnvelope.request.type === 'IntentRequest' &&
+      handlerInput.requestEnvelope.request.intent.name === 'AMAZON.HelpIntent'
+    );
   },
   handle(handlerInput) {
     const requestAttributes = handlerInput.attributesManager.getRequestAttributes();
@@ -254,9 +233,12 @@ const HelpIntentHandler = {
 // This function handles 'yes' and 'no' responses.
 const YesNoIntentHandler = {
   canHandle(handlerInput) {
-    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && (handlerInput.requestEnvelope.request.intent.name === 'AMAZON.YesIntent'
-        || handlerInput.requestEnvelope.request.intent.name === 'AMAZON.NoIntent');
+    return (
+      handlerInput.requestEnvelope.request.type === 'IntentRequest' &&
+      (handlerInput.requestEnvelope.request.intent.name ===
+        'AMAZON.YesIntent' ||
+        handlerInput.requestEnvelope.request.intent.name === 'AMAZON.NoIntent')
+    );
   },
   handle(handlerInput) {
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
@@ -274,7 +256,9 @@ const YesNoIntentHandler = {
 
     let speakOutput = '';
 
-    if (handlerInput.requestEnvelope.request.intent.name === 'AMAZON.YesIntent') {
+    if (
+      handlerInput.requestEnvelope.request.intent.name === 'AMAZON.YesIntent'
+    ) {
       speakOutput = requestAttributes.t('YES');
       return handlerInput.responseBuilder
         .addDelegateDirective({
@@ -286,13 +270,13 @@ const YesNoIntentHandler = {
         .getResponse();
     }
 
-    if (handlerInput.requestEnvelope.request.intent.name === 'AMAZON.NoIntent') {
+    if (
+      handlerInput.requestEnvelope.request.intent.name === 'AMAZON.NoIntent'
+    ) {
       speakOutput = requestAttributes.t('NO');
     }
 
-    return handlerInput.responseBuilder
-      .speak(speakOutput)
-      .getResponse();
+    return handlerInput.responseBuilder.speak(speakOutput).getResponse();
   },
 };
 
@@ -300,8 +284,11 @@ const YesNoIntentHandler = {
 // other intent handler.
 const FallbackIntentHandler = {
   canHandle(handlerInput) {
-    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && handlerInput.requestEnvelope.request.intent.name === 'AMAZON.FallbackIntent';
+    return (
+      handlerInput.requestEnvelope.request.type === 'IntentRequest' &&
+      handlerInput.requestEnvelope.request.intent.name ===
+        'AMAZON.FallbackIntent'
+    );
   },
   handle(handlerInput) {
     const requestAttributes = handlerInput.attributesManager.getRequestAttributes();
@@ -318,18 +305,20 @@ const FallbackIntentHandler = {
 
 const CancelAndStopIntentHandler = {
   canHandle(handlerInput) {
-    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && (handlerInput.requestEnvelope.request.intent.name === 'AMAZON.CancelIntent'
-        || handlerInput.requestEnvelope.request.intent.name === 'AMAZON.StopIntent');
+    return (
+      handlerInput.requestEnvelope.request.type === 'IntentRequest' &&
+      (handlerInput.requestEnvelope.request.intent.name ===
+        'AMAZON.CancelIntent' ||
+        handlerInput.requestEnvelope.request.intent.name ===
+          'AMAZON.StopIntent')
+    );
   },
   handle(handlerInput) {
     const requestAttributes = handlerInput.attributesManager.getRequestAttributes();
 
     const speakOutput = requestAttributes.t('CANCEL_STOP_RESPONSE');
 
-    return handlerInput.responseBuilder
-      .speak(speakOutput)
-      .getResponse();
+    return handlerInput.responseBuilder.speak(speakOutput).getResponse();
   },
 };
 
@@ -338,7 +327,9 @@ const SessionEndedRequestHandler = {
     return handlerInput.requestEnvelope.request.type === 'SessionEndedRequest';
   },
   handle(handlerInput) {
-    console.log(`Session ended with reason: ${handlerInput.requestEnvelope.request.reason}`);
+    console.log(
+      `Session ended with reason: ${handlerInput.requestEnvelope.request.reason}`
+    );
 
     return handlerInput.responseBuilder.getResponse();
   },
@@ -352,7 +343,9 @@ const ErrorHandler = {
     return true;
   },
   handle(handlerInput, error) {
-    console.log(`Error Request: ${JSON.stringify(handlerInput.requestEnvelope.request)}`);
+    console.log(
+      `Error Request: ${JSON.stringify(handlerInput.requestEnvelope.request)}`
+    );
     console.log(`Error handled: ${error.message}`);
 
     const requestAttributes = handlerInput.attributesManager.getRequestAttributes();
@@ -372,7 +365,9 @@ const ErrorHandler = {
 // be created or modified to handle the user's intent.
 const IntentReflectorHandler = {
   canHandle(handlerInput) {
-    return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest';
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+    );
   },
   handle(handlerInput) {
     const requestAttributes = handlerInput.attributesManager.getRequestAttributes();
@@ -380,9 +375,7 @@ const IntentReflectorHandler = {
     const intentName = Alexa.getIntentName(handlerInput.requestEnvelope);
     const speakOutput = requestAttributes.t('REFLECTOR', intentName);
 
-    return handlerInput.responseBuilder
-      .speak(speakOutput)
-      .getResponse();
+    return handlerInput.responseBuilder.speak(speakOutput).getResponse();
   },
 };
 
@@ -398,12 +391,16 @@ const EnvironmentCheckInterceptor = {
 
     // check for process.env.S3_PERSISTENCE_BUCKET
     if (!process.env.S3_PERSISTENCE_BUCKET) {
-      handlerInput.attributesManager.setRequestAttributes({ invalidConfig: true });
+      handlerInput.attributesManager.setRequestAttributes({
+        invalidConfig: true,
+      });
     }
 
     // check for process.env.SENDGRID_API_KEY
     if (!process.env.SENDGRID_API_KEY) {
-      handlerInput.attributesManager.setRequestAttributes({ invalidConfig: true });
+      handlerInput.attributesManager.setRequestAttributes({
+        invalidConfig: true,
+      });
     }
   },
 };
@@ -448,9 +445,9 @@ const LocalizationInterceptor = {
 /* FUNCTIONS */
 
 function getUserByPin(userPin) {
-  return new Promise(((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     try {
-      const users = usersData.filter((user) => user.passcode === userPin);
+      const users = usersData.filter(user => user.passcode === userPin);
       if (users && users.length > 0) {
         resolve(users[0]);
       } else {
@@ -459,7 +456,7 @@ function getUserByPin(userPin) {
     } catch (ex) {
       reject(ex);
     }
-  }));
+  });
 }
 
 // This function saves a copy of the stand up report to S3
@@ -475,9 +472,18 @@ function saveToS3(handlerInput) {
       const s3 = new AWS.S3();
 
       const s3Params = {
-        Body: requestAttributes.t('EMAIL_BODY', reportData.email, reportData.reportDate, reportData.yesterday, reportData.today, reportData.blocking),
+        Body: requestAttributes.t(
+          'EMAIL_BODY',
+          reportData.email,
+          reportData.reportDate,
+          reportData.yesterday,
+          reportData.today,
+          reportData.blocking
+        ),
         Bucket: process.env.S3_PERSISTENCE_BUCKET,
-        Key: `reports/${luxon.DateTime.local().toISODate()}/${reportData.name.replace(/ /g, '-').toLowerCase()}-${luxon.DateTime.utc().toMillis()}.txt`,
+        Key: `reports/${luxon.DateTime.local().toISODate()}/${reportData.name
+          .replace(/ /g, '-')
+          .toLowerCase()}-${luxon.DateTime.utc().toMillis()}.txt`,
       };
 
       s3.putObject(s3Params, () => {
@@ -499,19 +505,6 @@ function sendEmail(handlerInput) {
 
     try {
       const reportData = sessionAttributes.reportData;
-
-      const msg = {
-        to: process.env.TO_EMAIL,
-        from: process.env.FROM_EMAIL,
-        subject: requestAttributes.t('EMAIL_SUBJECT', reportData.name),
-        text: requestAttributes.t('EMAIL_BODY', reportData.email, reportData.reportDate, reportData.yesterday, reportData.today, reportData.blocking),
-      };
-
-      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-      sgMail.send(msg).then(() => {
-        // mail done sending
-        resolve();
-      });
     } catch (ex) {
       console.log(`bookAppointment() ERROR: ${ex.message}`);
       reject(ex);
@@ -537,12 +530,9 @@ exports.handler = Alexa.SkillBuilders.custom()
     CancelAndStopIntentHandler,
     SessionEndedRequestHandler,
     FallbackIntentHandler,
-    IntentReflectorHandler,
+    IntentReflectorHandler
   )
-  .addRequestInterceptors(
-    EnvironmentCheckInterceptor,
-    LocalizationInterceptor,
-  )
+  .addRequestInterceptors(EnvironmentCheckInterceptor, LocalizationInterceptor)
   .addErrorHandlers(ErrorHandler)
   .withApiClient(new Alexa.DefaultApiClient())
   .lambda();
